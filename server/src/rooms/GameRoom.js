@@ -1,0 +1,470 @@
+// // server/rooms/GameRoom.js
+// import { Room } from "@colyseus/core";
+// import { GameState } from "./schema/GameState.js";
+// import { PlayerState } from "./schema/PlayerState.js";
+
+// export class GameRoom extends Room {
+//   onCreate(options) {
+//     // Initialize room settings from options
+//     this.roomType = options.roomType || "lobby";
+//     this.maxClients = options.maxClients || 4;
+    
+//     // Create the room state
+//     this.setState(new GameState());
+//     this.state.roomType = this.roomType;
+    
+//     // Set up game mechanics
+//     this.setupGameMechanics();
+    
+//     console.log(`Created ${this.roomType} room`);
+//   }
+
+//   setupGameMechanics() {
+//     // Handle player movement
+//     this.onMessage("move", (client, data) => {
+//       console.log('moved');
+//       const player = this.state.players.get(client.sessionId);
+//       if (player) {
+//         player.x = data.x;
+//         player.y = data.y;
+//       }
+//     });
+
+//     // Handle player attacks
+//     this.onMessage("attack", (client, data) => {
+//       console.log('attacked');
+//       const player = this.state.players.get(client.sessionId);
+//       if (player) {
+//         // Will implement attack logic later
+//         console.log(`Player ${client.sessionId} attacked with shape ${player.shape}`);
+        
+//         // Broadcast the attack to all clients
+//         this.broadcast("playerAttack", {
+//           playerId: client.sessionId,
+//           x: data.x,
+//           y: data.y,
+//           shape: player.shape
+//         });
+//       }
+//     });
+    
+//     // Handle player joining dungeons (from lobby)
+//     if (this.roomType === "lobby") {
+//       this.onMessage("joinDungeon", (client, data) => {
+//         // Will implement dungeon joining logic later
+//         console.log(`Player ${client.sessionId} wants to join dungeon: Zone ${data.zoneType}-${data.zoneLevel}`);
+//       });
+//     }
+//   }
+
+//   onJoin(client, options) {
+//     console.log(`${client.sessionId} joined ${this.roomType}`);
+    
+//     // Create player state
+//     const player = new PlayerState();
+//     player.id = client.sessionId;
+//     player.shape = options.shape || "triangle";
+//     player.color = options.color || "#FFFFFF";
+//     player.x = Math.random() * 400;
+//     player.y = Math.random() * 400;
+    
+//     // Add some default values
+//     player.hp = 100;
+//     player.maxHp = 100;
+//     player.attack = 10;
+//     player.speed = 5;
+//     player.luck = 1;
+//     player.level = 1;
+//     player.gold = 0;
+    
+//     // Add to room state
+//     this.state.players.set(client.sessionId, player);
+//     client.send("welcome", {
+//       message: `Welcome to the ${this.roomType}!`,
+//       playerId: client.sessionId
+//     });
+//   }
+
+//   onLeave(client, consented) {
+//     console.log(`${client.sessionId} left ${this.roomType}`);
+    
+//     // Remove from room state
+//     this.state.players.delete(client.sessionId);
+//   }
+
+//   onDispose() {
+//     console.log(`Room ${this.roomId} (${this.roomType}) disposing...`);
+//   }
+// }
+
+// --------------v2-------------------
+
+// // server/rooms/GameRoom.js
+// import { Room } from "@colyseus/core";
+// import { GameState } from "./schema/GameState.js";
+// import { PlayerState } from "./schema/PlayerState.js";
+
+// export class GameRoom extends Room {
+//   onCreate(options) {
+//     // Initialize room settings from options
+//     this.roomType = options.roomType || "lobby";
+//     this.maxClients = options.maxClients || 4;
+    
+//     // Create the room state
+//     this.setState(new GameState());
+//     this.state.roomType = this.roomType;
+    
+//     // Set up movement directions for each player
+//     this.playerMovements = new Map();
+    
+//     // Set up game mechanics
+//     this.setupGameMechanics();
+    
+//     // Set up game loop
+//     this.setSimulationInterval(() => this.update(), 1000 / 60); // 60 FPS
+    
+//     console.log(`Created ${this.roomType} room`);
+//   }
+
+//   setupGameMechanics() {
+//     // Handle player movement start
+//     this.onMessage("moveStart", (client, data) => {
+//       const player = this.state.players.get(client.sessionId);
+//       if (!player) return;
+      
+//       // Get or initialize player movement state
+//       if (!this.playerMovements.has(client.sessionId)) {
+//         this.playerMovements.set(client.sessionId, {
+//           up: false,
+//           down: false,
+//           left: false,
+//           right: false
+//         });
+//       }
+      
+//       // Update movement state
+//       const movement = this.playerMovements.get(client.sessionId);
+//       movement[data.direction] = true;
+      
+//       console.log(`Player ${client.sessionId} started moving ${data.direction}`);
+//     });
+    
+//     // Handle player movement stop
+//     this.onMessage("moveStop", (client, data) => {
+//       const player = this.state.players.get(client.sessionId);
+//       if (!player) return;
+      
+//       // Get player movement state
+//       const movement = this.playerMovements.get(client.sessionId);
+//       if (movement) {
+//         movement[data.direction] = false;
+//         console.log(`Player ${client.sessionId} stopped moving ${data.direction}`);
+//       }
+//     });
+
+//     // Handle player attacks
+//     this.onMessage("attack", (client, data) => {
+//       const player = this.state.players.get(client.sessionId);
+//       if (!player) return;
+      
+//       console.log(`Player ${client.sessionId} attacked with shape ${player.shape}`);
+      
+//       // Broadcast the attack to all clients
+//       this.broadcast("playerAttack", {
+//         playerId: client.sessionId,
+//         x: player.x,
+//         y: player.y,
+//         shape: player.shape
+//       });
+//     });
+    
+//     // Handle player joining dungeons (from lobby)
+//     if (this.roomType === "lobby") {
+//       this.onMessage("joinDungeon", (client, data) => {
+//         // Will implement dungeon joining logic later
+//         console.log(`Player ${client.sessionId} wants to join dungeon: Zone ${data.zoneType}-${data.zoneLevel}`);
+//       });
+//     }
+//   }
+
+//   // Game update loop
+//   update() {
+//     // Process player movements
+//     for (const [sessionId, movement] of this.playerMovements.entries()) {
+//       const player = this.state.players.get(sessionId);
+//       if (!player) continue;
+      
+//       // Calculate player speed (can be adjusted based on player stats)
+//       const speed = player.speed || 5;
+//       let moved = false;
+      
+//       // Apply movement
+//       if (movement.up) {
+//         player.y -= speed;
+//         moved = true;
+//       }
+//       if (movement.down) {
+//         player.y += speed;
+//         moved = true;
+//       }
+//       if (movement.left) {
+//         player.x -= speed;
+//         moved = true;
+//       }
+//       if (movement.right) {
+//         player.x += speed;
+//         moved = true;
+//       }
+      
+//       // TODO: Add boundary checks
+//       if (player.x < 0) player.x = 0;
+//       if (player.y < 0) player.y = 0;
+//       if (player.x > 2000) player.x = 2000;
+//       if (player.y > 2000) player.y = 2000;
+//     }
+//   }
+
+//   onJoin(client, options) {
+//     console.log(`${client.sessionId} joined ${this.roomType}`);
+    
+//     // Create player state
+//     const player = new PlayerState();
+//     player.id = client.sessionId;
+//     player.shape = options.shape || "triangle";
+//     player.color = options.color || "#FFFFFF";
+//     player.x = Math.random() * 400;
+//     player.y = Math.random() * 400;
+    
+//     // Add some default values
+//     player.hp = 100;
+//     player.maxHp = 100;
+//     player.attack = 10;
+//     player.speed = 5;
+//     player.luck = 1;
+//     player.level = 1;
+//     player.gold = 0;
+    
+//     // Add to room state
+//     this.state.players.set(client.sessionId, player);
+    
+//     // Initialize player movement state
+//     this.playerMovements.set(client.sessionId, {
+//       up: false,
+//       down: false,
+//       left: false,
+//       right: false
+//     });
+    
+//     client.send("welcome", {
+//       message: `Welcome to the ${this.roomType}!`,
+//       playerId: client.sessionId
+//     });
+//   }
+
+//   onLeave(client, consented) {
+//     console.log(`${client.sessionId} left ${this.roomType}`);
+    
+//     // Clean up player movement state
+//     this.playerMovements.delete(client.sessionId);
+    
+//     // Remove from room state
+//     this.state.players.delete(client.sessionId);
+//   }
+
+//   onDispose() {
+//     console.log(`Room ${this.roomId} (${this.roomType}) disposing...`);
+//     // Clean up any resources
+//     this.playerMovements.clear();
+//   }
+// }
+
+// server/rooms/GameRoom.js
+import { Room } from "@colyseus/core";
+import { GameState } from "./schema/GameState.js";
+import { PlayerState } from "./schema/PlayerState.js";
+
+export class GameRoom extends Room {
+  onCreate(options) {
+    console.log("Creating room with options:", options);
+    
+    // Initialize room settings from options
+    this.roomType = options.roomType || "lobby";
+    this.maxClients = options.maxClients || 4;
+    
+    // Create the room state
+    this.setState(new GameState());
+    this.state.roomType = this.roomType;
+    
+    // Set up movement directions for each player
+    this.playerMovements = new Map();
+    
+    // Set up game mechanics
+    this.setupGameMechanics();
+    
+    // Set up game loop
+    this.setSimulationInterval(() => this.update(), 1000 / 60); // 60 FPS
+    
+    console.log(`Created ${this.roomType} room`);
+  }
+
+  setupGameMechanics() {
+    console.log("Setting up game mechanics");
+    
+    // Handle player movement start
+    this.onMessage("moveStart", (client, data) => {
+      console.log(`Player ${client.sessionId} started moving ${data.direction}`);
+      
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+      
+      // Get or initialize player movement state
+      if (!this.playerMovements.has(client.sessionId)) {
+        this.playerMovements.set(client.sessionId, {
+          up: false,
+          down: false,
+          left: false,
+          right: false
+        });
+      }
+      
+      // Update movement state
+      const movement = this.playerMovements.get(client.sessionId);
+      movement[data.direction] = true;
+    });
+    
+    // Handle player movement stop
+    this.onMessage("moveStop", (client, data) => {
+      console.log(`Player ${client.sessionId} stopped moving ${data.direction}`);
+      
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+      
+      // Get player movement state
+      const movement = this.playerMovements.get(client.sessionId);
+      if (movement) {
+        movement[data.direction] = false;
+      }
+    });
+
+    // For backward compatibility, still handle the old move message
+    this.onMessage("move", (client, data) => {
+      console.log(`Player ${client.sessionId} moved to ${data.x}, ${data.y}`);
+      
+      const player = this.state.players.get(client.sessionId);
+      if (player) {
+        player.x = data.x;
+        player.y = data.y;
+      }
+    });
+
+    // Handle player attacks
+    this.onMessage("attack", (client, data) => {
+      console.log(`Player ${client.sessionId} attacked`);
+      
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+      
+      console.log(`Player ${client.sessionId} attacked with shape ${player.shape}`);
+      
+      // Broadcast the attack to all clients
+      this.broadcast("playerAttack", {
+        playerId: client.sessionId,
+        x: player.x,
+        y: player.y,
+        shape: player.shape
+      });
+    });
+  }
+
+  // Game update loop
+  update() {
+    // Process player movements
+    for (const [sessionId, movement] of this.playerMovements.entries()) {
+      const player = this.state.players.get(sessionId);
+      if (!player) continue;
+      
+      // Calculate player speed (can be adjusted based on player stats)
+      const speed = player.speed || 5;
+      let moved = false;
+      
+      // Apply movement
+      if (movement.up) {
+        player.y -= speed;
+        moved = true;
+      }
+      if (movement.down) {
+        player.y += speed;
+        moved = true;
+      }
+      if (movement.left) {
+        player.x -= speed;
+        moved = true;
+      }
+      if (movement.right) {
+        player.x += speed;
+        moved = true;
+      }
+      
+      // Add boundary checks
+      if (player.x < 0) player.x = 0;
+      if (player.y < 0) player.y = 0;
+      if (player.x > 2000) player.x = 2000;
+      if (player.y > 2000) player.y = 2000;
+    }
+  }
+
+  onJoin(client, options) {
+    console.log(`${client.sessionId} joined ${this.roomType} with options:`, options);
+    
+    // Create player state
+    const player = new PlayerState();
+    player.id = client.sessionId;
+    player.shape = options.shape || "triangle";
+    player.color = options.color || "#FFFFFF";
+    player.x = Math.random() * 400;
+    player.y = Math.random() * 400;
+    
+    // Add some default values
+    player.hp = 100;
+    player.maxHp = 100;
+    player.attack = 10;
+    player.speed = 5;
+    player.luck = 1;
+    player.level = 1;
+    player.gold = 0;
+    
+    // Add to room state
+    this.state.players.set(client.sessionId, player);
+    
+    // Initialize player movement state
+    this.playerMovements.set(client.sessionId, {
+      up: false,
+      down: false,
+      left: false,
+      right: false
+    });
+    
+    client.send("welcome", {
+      message: `Welcome to the ${this.roomType}!`,
+      playerId: client.sessionId
+    });
+    
+    console.log(`Player ${client.sessionId} initialized at position (${player.x}, ${player.y})`);
+  }
+
+  onLeave(client, consented) {
+    console.log(`${client.sessionId} left ${this.roomType}`);
+    
+    // Clean up player movement state
+    this.playerMovements.delete(client.sessionId);
+    
+    // Remove from room state
+    this.state.players.delete(client.sessionId);
+  }
+
+  onDispose() {
+    console.log(`Room ${this.roomId} (${this.roomType}) disposing...`);
+    // Clean up any resources
+    this.playerMovements.clear();
+  }
+}
