@@ -1,6 +1,7 @@
-// public/js/game/ui/UiManager.js
+// public/js/game/ui/UIManager.js
 
 import * as PIXI from 'https://cdn.jsdelivr.net/npm/pixi.js@7.2.4/dist/pixi.min.mjs';
+import { SettingsMenu } from './components/SettingsMenu.js';
 
 export class UiManager {
     constructor(app) {
@@ -376,134 +377,21 @@ export class UiManager {
     }
     
     initSettingsMenu() {
-      // Create settings menu (hidden by default)
-      this.settingsMenu = new PIXI.Container();
-      this.settingsMenu.visible = false;
-      this.container.addChild(this.settingsMenu);
+      // Create settings menu using our component (hidden by default)
+      this.settingsMenu = new SettingsMenu(this.app, () => this.toggleSettingsMenu());
+      this.settingsMenu.container.visible = false;
       
-      // Background
-      const bg = new PIXI.Graphics();
-      bg.beginFill(0x336633, 0.9);
-      bg.drawRoundedRect(0, 0, 400, 300, 10);
-      bg.endFill();
-      this.settingsMenu.addChild(bg);
-      
-      // Title
-      const title = new PIXI.Text("Settings", {
-        fontFamily: "Arial",
-        fontSize: 24,
-        fill: 0xFFFFFF
-      });
-      title.x = 20;
-      title.y = 20;
-      this.settingsMenu.addChild(title);
-      
-      // Close button
-      const closeBtn = new PIXI.Graphics();
-      closeBtn.beginFill(0xFF5555);
-      closeBtn.drawRoundedRect(0, 0, 30, 30, 5);
-      closeBtn.endFill();
-      closeBtn.x = 360;
-      closeBtn.y = 10;
-      closeBtn.interactive = true;
-      closeBtn.buttonMode = true;
-      closeBtn.on("pointerdown", () => this.toggleSettingsMenu());
-      
-      const closeX = new PIXI.Text("X", {
-        fontFamily: "Arial",
-        fontSize: 16,
-        fill: 0xFFFFFF
-      });
-      closeX.x = 10;
-      closeX.y = 5;
-      closeBtn.addChild(closeX);
-      
-      this.settingsMenu.addChild(closeBtn);
-      
-      // Add some settings
-      const musicText = new PIXI.Text("Music Volume:", {
-        fontFamily: "Arial",
-        fontSize: 18,
-        fill: 0xFFFFFF
-      });
-      musicText.x = 20;
-      musicText.y = 70;
-      this.settingsMenu.addChild(musicText);
-      
-      // Music volume slider
-      const musicSlider = this.createSlider(200, 20, 0.7);
-      musicSlider.x = 180;
-      musicSlider.y = 70;
-      this.settingsMenu.addChild(musicSlider);
-      
-      // Sound effects
-      const sfxText = new PIXI.Text("SFX Volume:", {
-        fontFamily: "Arial",
-        fontSize: 18,
-        fill: 0xFFFFFF
-      });
-      sfxText.x = 20;
-      sfxText.y = 110;
-      this.settingsMenu.addChild(sfxText);
-      
-      // SFX volume slider
-      const sfxSlider = this.createSlider(200, 20, 0.9);
-      sfxSlider.x = 180;
-      sfxSlider.y = 110;
-      this.settingsMenu.addChild(sfxSlider);
-      
-      // Full screen option
-      const fullscreenText = new PIXI.Text("Fullscreen:", {
-        fontFamily: "Arial",
-        fontSize: 18,
-        fill: 0xFFFFFF
-      });
-      fullscreenText.x = 20;
-      fullscreenText.y = 150;
-      this.settingsMenu.addChild(fullscreenText);
-      
-      // Fullscreen toggle
-      const fullscreenToggle = this.createToggle(40, 20, false);
-      fullscreenToggle.x = 180;
-      fullscreenToggle.y = 150;
-      fullscreenToggle.interactive = true;
-      fullscreenToggle.buttonMode = true;
-      fullscreenToggle.on("pointerdown", () => {
-        console.log("Fullscreen toggle clicked");
-        // Handle fullscreen toggle
-        this.toggleFullscreen();
-      });
-      this.settingsMenu.addChild(fullscreenToggle);
-      
-      // Save button
-      const saveBtn = new PIXI.Graphics();
-      saveBtn.beginFill(0x44AA44);
-      saveBtn.drawRoundedRect(0, 0, 120, 40, 5);
-      saveBtn.endFill();
-      saveBtn.x = 140;
-      saveBtn.y = 220;
-      saveBtn.interactive = true;
-      saveBtn.buttonMode = true;
-      saveBtn.on("pointerdown", () => {
-        console.log("Save settings");
-        // Save settings
-        this.toggleSettingsMenu();
-      });
-      
-      const saveText = new PIXI.Text("Save", {
-        fontFamily: "Arial",
-        fontSize: 18,
-        fill: 0xFFFFFF
-      });
-      saveText.x = (120 - saveText.width) / 2;
-      saveText.y = (40 - saveText.height) / 2;
-      saveBtn.addChild(saveText);
-      
-      this.settingsMenu.addChild(saveBtn);
+      // Add to UI container
+      this.container.addChild(this.settingsMenu.container);
       
       // Center the menu
-      this.settingsMenu.x = (this.app.screen.width - this.settingsMenu.width) / 2;
-      this.settingsMenu.y = (this.app.screen.height - this.settingsMenu.height) / 2;
+      this.settingsMenu.centerOnScreen(this.app);
+      
+      // Handle save event
+      this.settingsMenu.onSave((settings) => {
+        // Show notification for player name update
+        this.showNotification(`Player name updated to: ${settings.playerName}`);
+      });
     }
     
     showZoneSelectionModal(onZoneSelected) {
@@ -651,13 +539,14 @@ export class UiManager {
     }
     
     toggleSettingsMenu() {
-      if (this.settingsMenu.visible) {
-        this.closeModal(this.settingsMenu);
+      if (this.settingsMenu.container.visible) {
+        this.closeModal(this.settingsMenu.container);
       } else {
-        this.showModal(this.settingsMenu);
+        this.showModal(this.settingsMenu.container);
       }
     }
     
+
     toggleFullscreen() {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(err => {

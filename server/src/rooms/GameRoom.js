@@ -94,6 +94,20 @@ export class GameRoom extends Room {
         shape: player.shape
       });
     });
+    
+    // Handle player name updates
+    this.onMessage("updateName", (client, data) => {
+      console.log(`Player ${client.sessionId} updating name to: ${data.name}`);
+      
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+      
+      // Update player name
+      player.name = data.name || "Player";
+      
+      // Notify the player that their name was updated
+      client.send("nameUpdated", { name: player.name });
+    });
   }
 
   // Game update loop
@@ -139,10 +153,23 @@ export class GameRoom extends Room {
     // Create player state
     const player = new PlayerState();
     player.id = client.sessionId;
+    player.name = options.name || "Player";
     player.shape = options.shape || "triangle";
-    player.color = options.color || "#FFFFFF";
     player.x = Math.random() * 400;
     player.y = Math.random() * 400;
+    
+    // Handle equipped colors if provided
+    if (options.equippedColors && Array.isArray(options.equippedColors)) {
+      player.equippedColors.clear();
+      options.equippedColors.forEach((color, index) => {
+        if (index < 4) {
+          player.equippedColors.push(color);
+        }
+      });
+    }
+    
+    // Update average color based on equipped colors
+    player.updateAverageColor();
     
     // Add some default values
     player.hp = 100;
